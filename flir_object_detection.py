@@ -6,11 +6,13 @@ Purpose: FLIR plant detection
 """
 
 import argparse
+from multiprocessing import process
 import os
 import sys
 from detecto import core, utils, visualize
 import glob
 import cv2
+from detecto.core import Model
 import numpy as np
 import tifffile as tifi
 from osgeo import gdal
@@ -18,6 +20,9 @@ import pyproj
 import utm
 import json
 import pandas as pd
+import multiprocessing
+import warnings
+warnings.filterwarnings("ignore")
 
 
 # --------------------------------------------------
@@ -28,9 +33,10 @@ def get_args():
         description='FLIR plant detection',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('dir',
-                        metavar='directory',
-                        help='Directory containing thermal TIF images')
+    parser.add_argument('img_list',
+                        nargs='+',
+                        metavar='img_list',
+                        help='Images (ex. flir_images/*.tif)')
 
     parser.add_argument('-m',
                         '--model',
@@ -71,12 +77,14 @@ def get_args():
                         default=None,
                         required=True)
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    if '/' not in args.dir[-1]:
-        args.dir = args.dir + '/'
+    # args = parser.parse_args()
 
-    return args
+    # if '/' not in args.dir[-1]:
+    #     args.dir = args.dir + '/'
+
+    # return args
 
 
 # --------------------------------------------------
@@ -153,9 +161,6 @@ def pixel2geocoord(one_img, x_pix, y_pix):
 
 # --------------------------------------------------
 def open_image(img_path):
-
-    # im = TIFF.open(img_path)
-    # a_img = im.read_image()
     a_img = tifi.imread(img_path)
     a_img = cv2.cvtColor(a_img, cv2.COLOR_GRAY2BGR)
     a_img = cv2.normalize(a_img, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
@@ -164,80 +169,96 @@ def open_image(img_path):
 
 
 # --------------------------------------------------
+def process_image(img):
+    args = get_args()
+    cont_cnt = 0
+    lett_dict = {}
+
+    model = core.Model.load(args.model, args.detect_class)
+
+    plot = img.split('/')[-1].replace('_ortho.tif', '')
+    trt_zone = find_trt_zone(plot)
+    plot_name = plot.replace('_', ' ')
+    print(f'Image: {plot_name}')
+    genotype = get_genotype(plot_name, args.geojson)
+    a_img = open_image(img)
+
+    predictions = model.predict(a_img)
+    labels, boxes, scores = predictions
+    copy = a_img.copy()
+
+    for i, box in enumerate(boxes):
+        if scores[i] >= 0.1:
+            cont_cnt += 1
+
+            min_x, min_y, max_x, max_y = get_min_max(box)
+            center_x, center_y = ((max_x+min_x)/2, (max_y+min_y)/2)
+            nw_lat, nw_lon = pixel2geocoord(img, min_x, max_y)
+            se_lat, se_lon = pixel2geocoord(img, max_x, min_y)
+
+            nw_e, nw_n, _, _ = utm.from_latlon(nw_lat, nw_lon, 12, 'N')
+            se_e, se_n, _, _ = utm.from_latlon(se_lat, se_lon, 12, 'N')
+
+            area_sq = (se_e - nw_e) * (se_n - nw_n)
+            lat, lon = pixel2geocoord(img, center_x, center_y)
+            lett_dict[cont_cnt] = {
+                'date': args.date,
+                'treatment': trt_zone,
+                'plot': plot,
+                'genotype': genotype,
+                'lon': lon,
+                'lat': lat,
+                'min_x': min_x,
+                'max_x': max_x,
+                'min_y': min_y,
+                'max_y': max_y,
+                'nw_lat': nw_lat,
+                'nw_lon': nw_lon,
+                'se_lat': se_lat,
+                'se_lon': se_lon,
+                'bounding_area_m2': area_sq
+            }
+
+    df = pd.DataFrame.from_dict(lett_dict, orient='index', columns=['date',
+                                                                'treatment',
+                                                                'plot',
+                                                                'genotype',
+                                                                'lon',
+                                                                'lat',
+                                                                'min_x',
+                                                                'max_x',
+                                                                'min_y',
+                                                                'max_y',
+                                                                'nw_lat',
+                                                                'nw_lon',
+                                                                'se_lat',
+                                                                'se_lon',
+                                                                'bounding_area_m2']).set_index('date')
+
+    return df
+
+
+# --------------------------------------------------
 def main():
     """Detect plants in image"""
 
     args = get_args()
-    model = core.Model.load(args.model, args.detect_class)
-    cont_cnt = 0
-    lett_dict = {}
 
     if not os.path.isdir(args.outdir):
         os.makedirs(args.outdir)
 
-    for img in glob.glob(f'{args.dir}*.tif'):
-        #plot = img.split('/')[-1].replace('_ortho.tif', '')
-        #trt_zone = find_trt_zone(plot)
-        #plot_name = plot.replace('_', ' ')
-        #genotype = get_genotype(plot_name, args.geojson)
+    #img_list = glob.glob(f'{args.dir}*.tif')
+    major_df = pd.DataFrame()
 
-        a_img = open_image(img)
+    with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
+        #df = p.map(process_image, img_list)
+        df = p.map(process_image, args.img_list)
+        major_df = major_df.append(df)
 
-        predictions = model.predict(a_img)
-        # predictions format: (labels, boxes, scores)
-        labels, boxes, scores = predictions
-        copy = a_img.copy()
-        print(scores)
-
-        for i, box in enumerate(boxes):
-            if scores[i] >= 0.1:
-                cont_cnt += 1
-
-                min_x, min_y, max_x, max_y = get_min_max(box)
-                center_x, center_y = ((max_x+min_x)/2, (max_y+min_y)/2)
-                nw_lat, nw_lon = pixel2geocoord(img, min_x, max_y)
-                se_lat, se_lon = pixel2geocoord(img, max_x, min_y)
-
-                nw_e, nw_n, _, _ = utm.from_latlon(nw_lat, nw_lon, 12, 'N')
-                se_e, se_n, _, _ = utm.from_latlon(se_lat, se_lon, 12, 'N')
-
-                area_sq = (se_e - nw_e) * (se_n - nw_n)
-                lat, lon = pixel2geocoord(img, center_x, center_y)
-                lett_dict[cont_cnt] = {
-                    'date': args.date,
-                    #'treatment': trt_zone,
-                    #'plot': plot,
-                    #'genotype': genotype,
-                    'lon': lon,
-                    'lat': lat,
-                    'min_x': min_x,
-                    'max_x': max_x,
-                    'min_y': min_y,
-                    'max_y': max_y,
-                    'nw_lat': nw_lat,
-                    'nw_lon': nw_lon,
-                    'se_lat': se_lat,
-                    'se_lon': se_lon,
-                    'bounding_area_m2': area_sq
-                }
-
-    df = pd.DataFrame.from_dict(lett_dict, orient='index', columns=['date',
-                                                                    #'treatment',
-                                                                    #'plot',
-                                                                    #'genotype',
-                                                                    'lon',
-                                                                    'lat',
-                                                                    'min_x',
-                                                                    'max_x',
-                                                                    'min_y',
-                                                                    'max_y',
-                                                                    'nw_lat',
-                                                                    'nw_lon',
-                                                                    'se_lat',
-                                                                    'se_lon',
-                                                                    'bounding_area_m2']).set_index('date')
     out_path = os.path.join(args.outdir, f'{args.date}_detection.csv')
-    df.to_csv(out_path)
+    major_df.to_csv(out_path)
+
+    print(f'Done, see outputs in ./{args.outdir}.')
 
 
 # --------------------------------------------------
