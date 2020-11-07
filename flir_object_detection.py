@@ -65,7 +65,7 @@ def get_args():
                         '--detect_class',
                         nargs='+',
                         help='Classes to detect',
-                        metavar='class',
+                        metavar='detect_class',
                         type=list,
                         default=['lettuce'])
 
@@ -76,6 +76,12 @@ def get_args():
                         type=str,
                         default=None,
                         required=True)
+
+    parser.add_argument('-t',
+                        '--type',
+                        help='Specify if FLIR or RGB images',
+                        required=True,
+                        choices=['FLIR', 'RGB'])
 
     return parser.parse_args()
 
@@ -161,9 +167,21 @@ def pixel2geocoord(one_img, x_pix, y_pix):
 
 # --------------------------------------------------
 def open_image(img_path):
-    a_img = tifi.imread(img_path)
-    a_img = cv2.cvtColor(a_img, cv2.COLOR_GRAY2BGR)
-    a_img = cv2.normalize(a_img, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+
+    args = get_args()
+
+    if args.type == 'FLIR':
+        a_img = tifi.imread(img_path)
+        a_img = cv2.cvtColor(a_img, cv2.COLOR_GRAY2BGR)
+        a_img = cv2.normalize(a_img, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    elif args.type == 'RGB':
+        a_img = tifi.imread(img_path)
+        # copy = image.copy()
+        # array = np.array(image)
+
+    print(args.type)
+
+
 
     return a_img
 
