@@ -33,10 +33,9 @@ def get_args():
         description='FLIR plant detection',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('img_list',
-                        nargs='+',
+    parser.add_argument('dir',
                         metavar='img_list',
-                        help='Images (ex. flir_images/*.tif)')
+                        help='Directory containing files')
 
     parser.add_argument('-m',
                         '--model',
@@ -83,14 +82,12 @@ def get_args():
                         required=True,
                         choices=['FLIR', 'RGB'])
 
-    return parser.parse_args()
+    args = parser.parse_args()
 
-    # args = parser.parse_args()
+    if '/' not in args.dir[-1]:
+        args.dir = args.dir + '/'
 
-    # if '/' not in args.dir[-1]:
-    #     args.dir = args.dir + '/'
-
-    # return args
+    return args
 
 
 # --------------------------------------------------
@@ -261,12 +258,12 @@ def main():
     if not os.path.isdir(args.outdir):
         os.makedirs(args.outdir)
 
-    #img_list = glob.glob(f'{args.dir}*.tif')
+    img_list = glob.glob(f'{args.dir}*.tif')
     major_df = pd.DataFrame()
 
     with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
         #df = p.map(process_image, img_list)
-        df = p.map(process_image, args.img_list)
+        df = p.map(process_image, img_list)
         major_df = major_df.append(df)
 
     out_path = os.path.join(args.outdir, f'{args.date}_detection.csv')
