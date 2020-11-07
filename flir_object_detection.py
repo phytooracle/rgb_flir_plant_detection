@@ -174,14 +174,10 @@ def open_image(img_path):
         a_img = tifi.imread(img_path)
         a_img = cv2.cvtColor(a_img, cv2.COLOR_GRAY2BGR)
         a_img = cv2.normalize(a_img, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+
     elif args.type == 'RGB':
         a_img = tifi.imread(img_path)
-        # copy = image.copy()
-        # array = np.array(image)
-
-    print(args.type)
-
-
+        a_img = np.array(a_img)
 
     return a_img
 
