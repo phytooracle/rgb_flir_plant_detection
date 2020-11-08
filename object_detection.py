@@ -194,57 +194,60 @@ def process_image(img):
     genotype = get_genotype(plot_name, args.geojson)
     a_img = open_image(img)
 
-    predictions = model.predict(a_img)
-    labels, boxes, scores = predictions
-    copy = a_img.copy()
+    try:
+        predictions = model.predict(a_img)
+        labels, boxes, scores = predictions
+        copy = a_img.copy()
 
-    for i, box in enumerate(boxes):
-        if scores[i] >= 0.1:
-            cont_cnt += 1
+        for i, box in enumerate(boxes):
+            if scores[i] >= 0.1:
+                cont_cnt += 1
 
-            min_x, min_y, max_x, max_y = get_min_max(box)
-            center_x, center_y = ((max_x+min_x)/2, (max_y+min_y)/2)
-            nw_lat, nw_lon = pixel2geocoord(img, min_x, max_y)
-            se_lat, se_lon = pixel2geocoord(img, max_x, min_y)
+                min_x, min_y, max_x, max_y = get_min_max(box)
+                center_x, center_y = ((max_x+min_x)/2, (max_y+min_y)/2)
+                nw_lat, nw_lon = pixel2geocoord(img, min_x, max_y)
+                se_lat, se_lon = pixel2geocoord(img, max_x, min_y)
 
-            nw_e, nw_n, _, _ = utm.from_latlon(nw_lat, nw_lon, 12, 'N')
-            se_e, se_n, _, _ = utm.from_latlon(se_lat, se_lon, 12, 'N')
+                nw_e, nw_n, _, _ = utm.from_latlon(nw_lat, nw_lon, 12, 'N')
+                se_e, se_n, _, _ = utm.from_latlon(se_lat, se_lon, 12, 'N')
 
-            area_sq = (se_e - nw_e) * (se_n - nw_n)
-            lat, lon = pixel2geocoord(img, center_x, center_y)
-            lett_dict[cont_cnt] = {
-                'date': args.date,
-                'treatment': trt_zone,
-                'plot': plot,
-                'genotype': genotype,
-                'lon': lon,
-                'lat': lat,
-                'min_x': min_x,
-                'max_x': max_x,
-                'min_y': min_y,
-                'max_y': max_y,
-                'nw_lat': nw_lat,
-                'nw_lon': nw_lon,
-                'se_lat': se_lat,
-                'se_lon': se_lon,
-                'bounding_area_m2': area_sq
-            }
+                area_sq = (se_e - nw_e) * (se_n - nw_n)
+                lat, lon = pixel2geocoord(img, center_x, center_y)
+                lett_dict[cont_cnt] = {
+                    'date': args.date,
+                    'treatment': trt_zone,
+                    'plot': plot,
+                    'genotype': genotype,
+                    'lon': lon,
+                    'lat': lat,
+                    'min_x': min_x,
+                    'max_x': max_x,
+                    'min_y': min_y,
+                    'max_y': max_y,
+                    'nw_lat': nw_lat,
+                    'nw_lon': nw_lon,
+                    'se_lat': se_lat,
+                    'se_lon': se_lon,
+                    'bounding_area_m2': area_sq
+                }
 
-    df = pd.DataFrame.from_dict(lett_dict, orient='index', columns=['date',
-                                                                'treatment',
-                                                                'plot',
-                                                                'genotype',
-                                                                'lon',
-                                                                'lat',
-                                                                'min_x',
-                                                                'max_x',
-                                                                'min_y',
-                                                                'max_y',
-                                                                'nw_lat',
-                                                                'nw_lon',
-                                                                'se_lat',
-                                                                'se_lon',
-                                                                'bounding_area_m2']).set_index('date')
+        df = pd.DataFrame.from_dict(lett_dict, orient='index', columns=['date',
+                                                                    'treatment',
+                                                                    'plot',
+                                                                    'genotype',
+                                                                    'lon',
+                                                                    'lat',
+                                                                    'min_x',
+                                                                    'max_x',
+                                                                    'min_y',
+                                                                    'max_y',
+                                                                    'nw_lat',
+                                                                    'nw_lon',
+                                                                    'se_lat',
+                                                                    'se_lon',
+                                                                    'bounding_area_m2']).set_index('date')
+    except:
+        pass
 
     return df
 
