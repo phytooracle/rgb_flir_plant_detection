@@ -193,7 +193,7 @@ def process_image(img):
     print(f'Image: {plot_name}')
     genotype = get_genotype(plot_name, args.geojson)
     a_img = open_image(img)
-
+    df = pd.DataFrame()
     try:
         predictions = model.predict(a_img)
         labels, boxes, scores = predictions
