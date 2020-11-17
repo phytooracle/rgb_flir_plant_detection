@@ -4,7 +4,7 @@
 Directory containing geoTIFFs. 
 
 ## Outputs
-* CSV file containing the bounding box and center coordinates (EPSG:4326) and the bounding area (m^2^) 
+* CSV file containing the bounding box and center coordinates (EPSG:4326) and the bounding area in m^2^. 
 
 ## Arguments and Flags
 * **Positional Arguments:** 
