@@ -4,7 +4,12 @@
 Directory containing geoTIFFs. 
 
 ## Outputs
-* CSV file containing the bounding box and center coordinates (EPSG:4326) and the bounding area in m<sup>2</sup>. 
+* CSV file containing:
+    * Date
+    * Plot
+    * Genotype
+    * Bounding box corner and center coordinates (EPSG:4326) 
+    * Bounding area in m<sup>2</sup>. 
 
 ## Arguments and Flags
 * **Positional Arguments:** 
