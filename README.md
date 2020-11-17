@@ -1,9 +1,10 @@
-# FLiR Lettuce Detection
+# RGB/FLIR Lettuce Detection
 
 ## Inputs
-
+Directory containing geoTIFFs. 
 
 ## Outputs
+* CSV file containing the bounding box and center coordinates (EPSG:4326) and the bounding area (m^2) 
 
 ## Arguments and Flags
 * **Positional Arguments:** 
