@@ -98,46 +98,46 @@ def get_min_max(box):
 
 
 # --------------------------------------------------
-def get_trt_zones():
-    trt_zone_1 = []
-    trt_zone_2 = []
-    trt_zone_3 = []
+# def get_trt_zones():
+#     trt_zone_1 = []
+#     trt_zone_2 = []
+#     trt_zone_3 = []
 
-    for i in range(3, 19):
-        for i2 in range(2, 48):
-            plot = f'MAC_Field_Scanner_Season_10_Range_{i}_Column_{i2}'
-            trt_zone_1.append(str(plot))
+#     for i in range(3, 19):
+#         for i2 in range(2, 48):
+#             plot = f'MAC_Field_Scanner_Season_10_Range_{i}_Column_{i2}'
+#             trt_zone_1.append(str(plot))
 
-    for i in range(20, 36):
-        for i2 in range(2, 48):
-            plot = f'MAC_Field_Scanner_Season_10_Range_{i}_Column_{i2}'
-            trt_zone_2.append(str(plot))
+#     for i in range(20, 36):
+#         for i2 in range(2, 48):
+#             plot = f'MAC_Field_Scanner_Season_10_Range_{i}_Column_{i2}'
+#             trt_zone_2.append(str(plot))
 
-    for i in range(37, 53):
-        for i2 in range(2, 48):
-            plot = f'MAC_Field_Scanner_Season_10_Range_{i}_Column_{i2}'
-            trt_zone_3.append(str(plot))
+#     for i in range(37, 53):
+#         for i2 in range(2, 48):
+#             plot = f'MAC_Field_Scanner_Season_10_Range_{i}_Column_{i2}'
+#             trt_zone_3.append(str(plot))
 
-    return trt_zone_1, trt_zone_2, trt_zone_3
+#     return trt_zone_1, trt_zone_2, trt_zone_3
 
 
 # --------------------------------------------------
-def find_trt_zone(plot_name):
-    trt_zone_1, trt_zone_2, trt_zone_3 = get_trt_zones()
+# def find_trt_zone(plot_name):
+#     trt_zone_1, trt_zone_2, trt_zone_3 = get_trt_zones()
 
-    if plot_name in trt_zone_1:
-        trt = 'treatment 1'
+#     if plot_name in trt_zone_1:
+#         trt = 'treatment 1'
 
-    elif plot_name in trt_zone_2:
-        trt = 'treatment 2'
+#     elif plot_name in trt_zone_2:
+#         trt = 'treatment 2'
 
-    elif plot_name in trt_zone_3:
-        trt = 'treatment 3'
+#     elif plot_name in trt_zone_3:
+#         trt = 'treatment 3'
 
-    else:
-        trt = 'border'
+#     else:
+#         trt = 'border'
 
-    return trt
+#     return trt
 
 
 # --------------------------------------------------
@@ -188,7 +188,7 @@ def process_image(img):
     model = core.Model.load(args.model, args.detect_class)
 
     plot = img.split('/')[-1].replace('_ortho.tif', '')
-    trt_zone = find_trt_zone(plot)
+#     trt_zone = find_trt_zone(plot)
     plot_name = plot.replace('_', ' ')
     print(f'Image: {plot_name}')
     genotype = get_genotype(plot_name, args.geojson)
@@ -215,7 +215,7 @@ def process_image(img):
                 lat, lon = pixel2geocoord(img, center_x, center_y)
                 lett_dict[cont_cnt] = {
                     'date': args.date,
-                    'treatment': trt_zone,
+#                     'treatment': trt_zone,
                     'plot': plot,
                     'genotype': genotype,
                     'lon': lon,
@@ -232,7 +232,7 @@ def process_image(img):
                 }
 
         df = pd.DataFrame.from_dict(lett_dict, orient='index', columns=['date',
-                                                                    'treatment',
+#                                                                     'treatment',
                                                                     'plot',
                                                                     'genotype',
                                                                     'lon',
