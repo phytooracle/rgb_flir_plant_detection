@@ -65,8 +65,8 @@ def get_args():
                         nargs='+',
                         help='Classes to detect',
                         metavar='detect_class',
-                        type=list,
-                        default=['lettuce'])
+                        type=str,
+                        default='lettuce')
 
     parser.add_argument('-d',
                         '--date',
@@ -200,7 +200,7 @@ def process_image(img):
         copy = a_img.copy()
 
         for i, box in enumerate(boxes):
-            if scores[i] >= 0.1:
+            if scores[i] >= 0.9:
                 cont_cnt += 1
 
                 min_x, min_y, max_x, max_y = get_min_max(box)
