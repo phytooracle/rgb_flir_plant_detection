@@ -2,7 +2,7 @@
 """
 Author : Emmanuel Gonzalez
 Date   : 2020-11-06
-Purpose: FLIR plant detection
+Purpose: RGB/FLIR plant detection
 """
 
 import argparse
@@ -30,7 +30,7 @@ def get_args():
     """Get command-line arguments"""
 
     parser = argparse.ArgumentParser(
-        description='FLIR plant detection',
+        description='RGB/thermal plant detection',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('dir',
