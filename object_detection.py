@@ -66,7 +66,7 @@ def get_args():
                         help='Classes to detect',
                         metavar='detect_class',
                         type=str,
-                        default='lettuce')
+                        default=['lettuce'])
 
     parser.add_argument('-d',
                         '--date',
