@@ -11,6 +11,7 @@ import os
 import sys
 from detecto import core, utils, visualize
 import glob
+import shutil
 import cv2
 from detecto.core import Model
 import numpy as np
@@ -66,7 +67,8 @@ def get_args():
                         help='Classes to detect',
                         metavar='detect_class',
                         type=str,
-                        default=['lettuce'])
+                        required=True)
+                        # default=['lettuce'])
 
     parser.add_argument('-d',
                         '--date',
@@ -80,7 +82,7 @@ def get_args():
                         '--type',
                         help='Specify if FLIR or RGB images',
                         required=True,
-                        choices=['FLIR', 'RGB'])
+                        choices=['FLIR', 'RGB', 'DRONE'])
 
     args = parser.parse_args()
 
@@ -120,6 +122,30 @@ def pixel2geocoord(one_img, x_pix, y_pix):
 
 
 # --------------------------------------------------
+def prepare_drone_images(img_list):
+    for img in img_list:
+        substring_list = ['MAC', 'Field', 'Scanner', 'Season']
+
+        extension = os.path.splitext(os.path.basename(img))[-1]
+        rel_path = os.path.relpath(img)
+        path = os.path.normpath(rel_path)
+
+        out_path = path.split(os.sep)[-3]
+        iden = path.split(os.sep)[-2]
+        file_name = path.split(os.sep)[-1]
+
+        if any(substring in img for substring in substring_list):
+            out_file_name = ''.join(['_'.join(iden.split(' ')), '_ortho', extension])
+        else:
+            out_file_name = ''.join([iden, '_ortho', extension])
+        
+        shutil.move(rel_path, os.path.join(out_path, out_file_name))
+
+        if os.path.isfile(os.path.join(out_path, out_file_name)):
+            os.rmdir(os.path.join(out_path, iden))
+
+
+# --------------------------------------------------
 def open_image(img_path):
 
     args = get_args()
@@ -129,9 +155,12 @@ def open_image(img_path):
         a_img = cv2.cvtColor(a_img, cv2.COLOR_GRAY2BGR)
         a_img = cv2.normalize(a_img, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
 
-    elif args.type == 'RGB':
+    else:
         a_img = tifi.imread(img_path)
         a_img = np.array(a_img)
+        
+        if a_img.shape[2]==4:
+            a_img = np.array(a_img)[:,:,:3]
 
     return a_img
 
@@ -141,18 +170,21 @@ def process_image(img):
     args = get_args()
     cont_cnt = 0
     lett_dict = {}
-
     model = core.Model.load(args.model, args.detect_class)
 
     plot = img.split('/')[-1].replace('_ortho.tif', '')
     plot_name = plot.replace('_', ' ')
     print(f'Image: {plot_name}')
     genotype = get_genotype(plot_name, args.geojson)
+    print(genotype)
     a_img = open_image(img)
+    print(a_img.shape)
     df = pd.DataFrame()
     try:
         predictions = model.predict(a_img)
+        print(predictions)
         labels, boxes, scores = predictions
+        print(scores)
         copy = a_img.copy()
 
         for i, box in enumerate(boxes):
@@ -218,6 +250,16 @@ def main():
         os.makedirs(args.outdir)
 
     img_list = glob.glob(f'{args.dir}*.tif')
+
+    if args.type=='DRONE':
+        img_list = glob.glob(os.path.join(args.dir, '*/*.tif'))
+
+        if img_list:
+            prepare_drone_images(img_list)
+
+        img_list = glob.glob(os.path.join(args.dir, '*.tif'))
+        print(img_list)
+
     major_df = pd.DataFrame()
 
     with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
