@@ -23,6 +23,7 @@ import json
 import pandas as pd
 import multiprocessing
 import warnings
+from pyproj import Proj
 warnings.filterwarnings("ignore")
 
 
@@ -176,13 +177,12 @@ def process_image(img):
     plot_name = plot.replace('_', ' ')
     print(f'Image: {plot_name}')
     genotype = get_genotype(plot_name, args.geojson)
-    print(genotype)
     a_img = open_image(img)
-    print(a_img.shape)
     df = pd.DataFrame()
+    myProj = Proj("+proj=utm +zone=12N, +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+
     try:
         predictions = model.predict(a_img)
-        print(predictions)
         labels, boxes, scores = predictions
         print(scores)
         copy = a_img.copy()
@@ -193,14 +193,23 @@ def process_image(img):
 
             min_x, min_y, max_x, max_y = get_min_max(box)
             center_x, center_y = ((max_x+min_x)/2, (max_y+min_y)/2)
-            nw_lat, nw_lon = pixel2geocoord(img, min_x, max_y)
-            se_lat, se_lon = pixel2geocoord(img, max_x, min_y)
+            if args.type in ['FLIR', 'RGB']: 
+                lat, lon = pixel2geocoord(img, center_x, center_y)
+                nw_lat, nw_lon = pixel2geocoord(img, min_x, max_y)
+                se_lat, se_lon = pixel2geocoord(img, max_x, min_y)
+                nw_e, nw_n = myProj(nw_lon, nw_lat) 
+                se_e, se_n = myProj(se_lon, se_lat)
 
-            nw_e, nw_n, _, _ = utm.from_latlon(nw_lat, nw_lon, 12, 'N')
-            se_e, se_n, _, _ = utm.from_latlon(se_lat, se_lon, 12, 'N')
+            elif args.type in ['DRONE']:
+                northing, easting = pixel2geocoord(img, center_x, center_y)
+                lon, lat = myProj(easting, northing, inverse=True)
+                nw_n, nw_e = pixel2geocoord(img, min_x, max_y)
+                se_n, se_e = pixel2geocoord(img, max_x, min_y)
+                nw_lon, nw_lat = myProj(nw_e, nw_n, inverse=True)
+                se_lon, se_lat = myProj(se_e, se_n, inverse=True)
+                print(se_lon)
 
             area_sq = (se_e - nw_e) * (se_n - nw_n)
-            lat, lon = pixel2geocoord(img, center_x, center_y)
             lett_dict[cont_cnt] = {
                 'date': args.date,
                 'pred_conf': scores[i].detach().numpy(),
@@ -258,7 +267,6 @@ def main():
             prepare_drone_images(img_list)
 
         img_list = glob.glob(os.path.join(args.dir, '*.tif'))
-        print(img_list)
 
     major_df = pd.DataFrame()
 
