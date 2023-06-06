@@ -173,7 +173,7 @@ def process_image(img):
     lett_dict = {}
     model = core.Model.load(args.model, args.detect_class)
 
-    plot = img.split('/')[-1].replace('_ortho.tif', '')
+    plot = img.split('/')[-1].replace('_ortho.tif', '').replace('_plotclip.tif', '')
     plot_name = plot.replace('_', ' ')
     print(f'Image: {plot_name}')
     genotype = get_genotype(plot_name, args.geojson)
