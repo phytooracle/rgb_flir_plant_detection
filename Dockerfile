@@ -5,7 +5,8 @@ COPY . /opt
 
 USER root
 
-RUN apt-get update
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update -y
 RUN apt-get install -y python3.6-dev \
                        python3-pip \
                        wget \
@@ -23,6 +24,10 @@ RUN add-apt-repository ppa:ubuntugis/ubuntugis-unstable
 RUN apt-get update
 RUN apt-get install -y libgdal-dev
 RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade wheel
+RUN pip3 install cython
+RUN pip3 install --upgrade cython
+RUN pip3 install setuptools==57.5.0
 RUN pip3 install -r requirements.txt
 RUN wget http://download.osgeo.org/libspatialindex/spatialindex-src-1.7.1.tar.gz
 RUN tar -xvf spatialindex-src-1.7.1.tar.gz
